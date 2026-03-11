@@ -1,5 +1,5 @@
 # Quantum-Based-Enhanced-Transformer-QBET
-manuscript under review at Evolving Systems (Springer), 2025
+Major revision submitted at Evolving Systems (Springer), 2025
 (Code to be soon uploaded)
 
 Official implementation of **QBET (Quantum-Based Enhanced Transformer)**, a hybrid quantum-classical transformer architecture for natural language processing.
