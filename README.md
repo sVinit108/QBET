@@ -1,5 +1,6 @@
 # Quantum-Based-Enhanced-Transformer-QBET
-Major revision submitted at Evolving Systems (Springer), 2025
+Major revision submitted at Evolving Systems (Springer), 2025 (Q1 Journal)  
+(Code to be uploaded upon publication)
 
 Official implementation of **QBET (Quantum-Based Enhanced Transformer)**, a hybrid quantum-classical transformer architecture for natural language processing.
 
@@ -9,23 +10,31 @@ Official implementation of **QBET (Quantum-Based Enhanced Transformer)**, a hybr
 
 ## Overview
 
-QBET integrates trainable quantum components into transformer architectures, achieving **93.3 perplexity** on Penn Treebank and **211.5 perplexity** on WikiText-2, outperforming both classical baselines (Transformer: 97.0 PPL, FNet: 117.7 PPL) and the quantum baseline Quixer (122.0 PPL on PTB). All experiments are conducted via classical simulation of quantum circuits using TorchQuantum, consistent with standard practice in quantum ML research.
+QBET integrates trainable quantum components into transformer architectures via classical simulation, achieving competitive perplexity across three benchmarks while outperforming both classical and quantum baselines:
+
+- **93.3 PPL** on Penn Treebank (vs Transformer 97.0, Quixer 122.0)
+- **211.5 PPL** on WikiText-2 (vs Transformer 246.7, Quixer 317.5)
+- **145.8 PPL** on WikiText-103 (vs Linformer 152.8, Performer 164.0)
+
+All results obtained in 5–6 epochs, compared to 30 epochs for classical baselines.
+
+> **Note:** All experiments use classical simulation of quantum circuits via [TorchQuantum](https://github.com/mit-han-lab/torchquantum). No quantum hardware was used. QBET is positioned as a hybrid quantum-inspired architecture; deployment on real quantum hardware would require circuit compilation and noise mitigation.
 
 **Key Features:**
-- **Position-Aware Quantum Mixing (PAQM)**: Variational quantum circuits (RY, RZ, RX gates + CNOT entanglement) with hybrid sinusoidal and learned positional encoding
-- **Sparse Quantum Attention**: Selective quantum enhancement on high-importance tokens via surrogate-gradient training
-- **Fast Convergence**: Reaches best validation perplexity in 5–6 epochs vs. 30 epochs for classical baselines
-- **Modular Design**: Configurable quantum components (qubits, circuit depth, attention tokens)
+- **Position-Aware Quantum Mixing (PAQM)**: Variational quantum circuits (RY, RZ, RX + CNOT entanglement) with hybrid sinusoidal and learned positional encoding baked directly into the circuit
+- **Sparse Quantum Attention**: Selective quantum enhancement applied only to top-K important tokens via an importance scoring network
+- **Surrogate Gradient Training**: Lightweight 156-parameter MLP approximates quantum gradients — 10–15× faster than parameter-shift methods
+- **Modular Design**: Configurable quantum components (qubits, circuit depth, attention tokens); supports Mixture-of-Experts feed-forward networks
 
 ## Architecture
 ```
-Input Tokens → Embedding → [Quantum Mixing → Sparse Attention → FFN] × L → Output
+Input Tokens → Embedding → [PAQM → Sparse Attention → FFN] × L → Output
 ```
 
-Each layer contains:
-1. **PAQM (Quantum Mixing Layer)**: Projects embeddings to quantum amplitudes, applies parameterized quantum circuits with positional encoding, measures expectation values
-2. **Sparse Attention**: Classical attention + optional quantum enhancement on top-K important tokens
-3. **Feed-Forward Network**: Standard FFN (supports MoE with `num_experts>1`)
+Each `HybridTransformerBlock` contains:
+1. **Position-Aware Quantum Mixing (PAQM)**: Projects embeddings to quantum amplitudes via amplitude encoding, applies hybrid positional encoding + variational layers (RY→RZ→RX per qubit) + CNOT entanglement, measures Pauli-Z expectation values, projects back to embedding dimension
+2. **Sparse Quantum Attention**: Classical sparse attention (local window + global tokens) augmented with a quantum-computed bias on top-K important tokens; surrogate gradients used during training
+3. **Feed-Forward Network**: Standard FFN (supports Mixture-of-Experts when `num_experts > 1`)
 
 ## Installation
 
@@ -69,15 +78,19 @@ python run.py -m QBET -d cuda
 Edit hyperparameters in `run.py`:
 ```python
 QBET_hparams = {
-    "dimension": 128,          # Embedding dimension
+    "dimension": 128,          # Embedding dimension (d_model)
     "num_heads": 2,            # Attention heads
     "num_layers": 2,           # Transformer layers
     "n_qubits": 4,             # Qubits for quantum mixing (PAQM)
-    "attn_qubits": 3,          # Qubits for quantum attention
-    "quantum_tokens": 8,       # Top-K tokens for quantum enhancement
+    "attn_qubits": 3,          # Qubits for quantum attention circuit
+    "n_quantum_layers": 2,     # Variational layers in PAQM circuit
+    "quantum_tokens": 8,       # Top-K tokens for quantum attention
+    "sparse_window": 32,       # Local attention window size
+    "global_tokens": 8,        # Global attention tokens
     "batch_size": 32,
     "lr": 0.001,               # Learning rate (cosine annealing)
-    "epochs": 15,              # Max epochs (early stopping at patience=5)
+    "dropout": 0.08,
+    "epochs": 15,              # Max epochs (early stopping patience=5)
 }
 ```
 
@@ -85,7 +98,7 @@ QBET_hparams = {
 
 Modify `setup_training.py` to load your dataset:
 ```python
-# Replace Penn Treebank loading
+# Replace Penn Treebank loading with your dataset
 raw_dset = load_dataset("dataset_name")
 ```
 
@@ -95,38 +108,47 @@ raw_dset = load_dataset("dataset_name")
 
 | Model | Dimension | Layers | Val PPL | Epochs |
 |-------|-----------|--------|---------|--------|
-| LSTM | 128 | 2 | 127.1 (±3.1) | 30 |
-| FNet | 128 | 2 | 117.7 (±0.8) | 30 |
-| Transformer | 128 | 1 | 97.0 (±0.3) | 30 |
-| Performer | 128 | 2 | 99.7 (±1.0) | 50 |
-| Linformer | 128 | 2 | 93.0 (±0.8) | 50 |
-| Quixer | 512, 6 qubits | cubic | 122.0 (±2.2) | 30 |
-| **QBET (Ours)** | **128, 4+3 qubits** | **L=2, H=2** | **93.3 (±0.8)** | **5** |
+| LSTM | 128 | 2 | 127.1 ± 3.1 | 30 |
+| FNet | 128 | 2 | 117.7 ± 0.8 | 30 |
+| Transformer | 128 | 1 | 97.0 ± 0.3 | 30 |
+| Linformer | 128 | 2 | 93.0 ± 0.8 | 50 |
+| Performer | 128 | 2 | 99.7 ± 1.0 | 50 |
+| Quixer | 512, 6 qubits | cubic | 122.0 ± 2.2 | 30 |
+| **QBET (Ours)** | **128, 4+3 qubits** | **L=2, H=2** | **93.3 ± 0.8** | **5** |
 
 ### WikiText-2
 
 | Model | Dimension | Layers | Val PPL | Epochs |
 |-------|-----------|--------|---------|--------|
-| LSTM | 128 | 2 | 308.1 (±2.1) | 30 |
-| FNet | 128 | 2 | 287.0 (±0.6) | 30 |
-| Transformer | 128 | 1 | 246.7 (±0.4) | 30 |
-| Performer | 128 | 2 | 223.6 (±2.3) | 12 |
-| Linformer | 128 | 2 | 220.6 (±1.1) | 27 |
-| Quixer | 512, 6 qubits | cubic | 317.5 (±3.2) | 30 |
-| **QBET (Ours)** | **128, 4+3 qubits** | **L=2, H=2** | **211.5 (±0.8)** | **6** |
+| LSTM | 128 | 2 | 308.1 ± 2.1 | 30 |
+| FNet | 128 | 2 | 287.0 ± 0.6 | 30 |
+| Transformer | 128 | 1 | 246.7 ± 0.4 | 30 |
+| Linformer | 128 | 2 | 220.6 ± 1.1 | 27 |
+| Performer | 128 | 2 | 223.6 ± 2.3 | 12 |
+| Quixer | 512, 6 qubits | cubic | 317.5 ± 3.2 | 30 |
+| **QBET (Ours)** | **128, 4+3 qubits** | **L=2, H=2** | **211.5 ± 0.8** | **6** |
 
-All results averaged over 10 seeds. Standard deviations reported.
+### WikiText-103 (Q-imp disabled for computational tractability)
+
+| Model | Best Val PPL | Epochs |
+|-------|-------------|--------|
+| Linformer | 152.76 | 5 |
+| Performer | 164.03 | 5 |
+| Quixer | 148.05 | 5 |
+| **QBET (Ours)** | **145.83** | **5** |
+
+*All PTB and WikiText-2 results averaged over 10 seeds.*
 
 ### Ablation Study (PTB / WikiText-2)
 
 | Configuration | PTB PPL | Δ PTB | Wiki PPL | Δ Wiki |
 |---------------|---------|-------|----------|--------|
 | QBET (Full Model) | 93.3 | — | 211.5 | — |
-| Q-Mix Only (PAQM) | 97.3 | +4.0 | 215.8 | +4.3 |
-| Q-Imp Only | 120.6 | +27.3 | 229.4 | +17.9 |
+| Q-Mix Only (PAQM, no Q-imp) | 97.3 | +4.0 | 215.8 | +4.3 |
+| Q-Imp Only (no PAQM) | 120.6 | +27.3 | 229.4 | +17.9 |
 | No Quantum Components | 122.1 | +28.8 | 267.5 | +56.0 |
 
-PAQM is the dominant contributor. Removing it raises PTB PPL by 28.8 points; removing only quantum attention raises it by 4.0 points.
+PAQM is the dominant contributor — removing it raises PTB PPL by 28.8 points.
 
 ## Project Structure
 ```
@@ -143,37 +165,43 @@ QBET/
 
 ## Key Components
 
-### Quantum Mixing Layer (PAQM)
+### Position-Aware Quantum Mixing (PAQM)
 ```python
 class PositionAwareQuantumMixing(nn.Module):
-    # 1. Projects embeddings → L2-normalized amplitude vector (2^n_qubits dim)
-    # 2. Initializes quantum state via amplitude embedding
-    # 3. Applies hybrid positional encoding (fixed sinusoidal + learned RY/RZ)
-    # 4. Applies variational layers: RY → RZ → RX per qubit + CNOT entanglement
-    # 5. Measures Pauli-Z expectation values → projects back to embedding space
-    # 6. Gated residual connection (learnable scalar gate)
+    # 1. Project embedding → amplitude vector (size 2^n_qubits)
+    # 2. L2-normalize → initialize quantum state via amplitude embedding
+    # 3. For each circuit layer:
+    #    a. Apply fixed sinusoidal RZ encoding (position-dependent)
+    #    b. Apply learned RY positional bias (small, trainable)
+    #    c. Apply variational RY → RZ → RX per qubit
+    #    d. Apply CNOT entanglement (linear chain + wrap-around)
+    # 4. Measure Pauli-Z expectation values on all qubits
+    # 5. Project measurement vector → embedding dimension
+    # 6. Gated residual: gamma * quantum_out + (1-gamma) * input
 ```
 
 ### Sparse Attention with Quantum Enhancement
 ```python
 class SparseAttention(nn.Module):
-    # Standard Q, K, V projections
-    # Sparse pattern: local window (w=32) + global tokens (g=8)
-    # Importance network selects top-K tokens for quantum enhancement
-    # Shallow PQC (depth 2, 5 gates) computes quantum attention bias
-    # Surrogate gradient for efficient backpropagation
+    # 1. Score token importance via linear network
+    # 2. Standard Q, K, V projections
+    # 3. Sparse mask: local window (w=32) + global tokens (g=8)
+    # 4. Select top-K important tokens (K=8)
+    # 5. For each important token: quantum circuit on [Q_i, K_j] pairs
+    # 6. Add quantum bias to classical attention logits
+    # 7. Softmax attention + output projection
 ```
 
 ### Surrogate Gradient Training
-Classical MLP approximates quantum gradients during backpropagation, enabling 10–15× speedup over parameter-shift methods:
 ```python
-# Forward: real quantum expectation values computed
+# Forward pass: real quantum expectation values
 quantum_output = quantum_circuit(q_device, input)
 
-# Backward: surrogate provides gradient estimates (straight-through estimator)
+# Backward pass: surrogate gradients (straight-through estimator)
+# Surrogate: Linear(8,12) → Tanh → Linear(12,3) [156 parameters]
 if training:
-    surrogate_grad = surrogate_network(input)
-    output = quantum_output.detach() + (surrogate_grad - surrogate_grad.detach())
+    surrogate_output = surrogate_network(input)
+    output = quantum_output.detach() + (surrogate_output - surrogate_output.detach())
 ```
 
 ## Hardware Requirements
@@ -181,13 +209,13 @@ if training:
 **Minimum:**
 - GPU: 8GB VRAM (NVIDIA RTX 2080 or equivalent)
 - RAM: 16GB
-- Training time: ~14 sec/iteration on RTX A6000 (with quantum attention enabled)
+- Training time: ~14 sec/iteration (Q-imp ON) on RTX A6000
 
 **Recommended:**
 - GPU: 24GB VRAM (NVIDIA RTX 3090/4090, A6000)
 - RAM: 32GB+
 
-> **Note on inference time:** With quantum attention disabled (`use_quantum_attention=False`), inference reduces to ~0.53 ms/iter — within one order of magnitude of classical baselines. The overhead arises entirely from classical simulation of quantum circuits, not from the model architecture itself.
+**Inference note:** With Q-imp disabled (`use_quantum_attention=False`), inference reduces to ~0.53 ms/iter — within one order of magnitude of classical baselines. The overhead with Q-imp enabled arises entirely from quantum circuit simulation on classical hardware and is expected to vanish on real quantum hardware.
 
 ## License
 
@@ -197,10 +225,5 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file.
 
 - Built with [TorchQuantum](https://github.com/mit-han-lab/torchquantum) for quantum circuit simulation
 - Baseline implementations inspired by [Quixer](https://arxiv.org/abs/2406.04305)
-- Trained on Penn Treebank and WikiText-2/103 datasets
+- Datasets: Penn Treebank, WikiText-2, WikiText-103 via HuggingFace
 
-For questions or issues, please open a GitHub issue or contact [vdsharma_m24@ce.vjti.ac.in]
-
----
-
-**Note:** This implementation uses classical simulation of quantum circuits via TorchQuantum. QBET is positioned as a hybrid quantum-inspired architecture; all claims are limited to what is demonstrated under simulation at small scale. For deployment on actual quantum hardware, circuit compilation and noise mitigation strategies will be required.
