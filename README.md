@@ -1,5 +1,4 @@
 # Quantum-Based-Enhanced-Transformer-QBET
-(Code to be uploaded soon) 
 
 Official implementation of **QBET (Quantum-Based Enhanced Transformer)**, a hybrid quantum-classical transformer architecture for natural language processing.
 
@@ -45,7 +44,7 @@ Each `HybridTransformerBlock` contains:
 ```bash
 # Clone repository
 git clone https://github.com/sVinit108/QBET.git
-cd QBET
+cd code
 
 # Create virtual environment
 python -m venv venv
@@ -91,14 +90,6 @@ QBET_hparams = {
     "dropout": 0.08,
     "epochs": 15,              # Max epochs (early stopping patience=5)
 }
-```
-
-### Custom Dataset
-
-Modify `setup_training.py` to load your dataset:
-```python
-# Replace Penn Treebank loading with your dataset
-raw_dset = load_dataset("dataset_name")
 ```
 
 ## Results
@@ -152,7 +143,7 @@ PAQM is the dominant contributor — removing it raises PTB PPL by 28.8 points.
 ## Project Structure
 ```
 QBET/
-├── QBET/
+├── code/
 │   ├── QBET.py              # Main model architecture
 │   ├── setup_training.py    # Training loop and data loading
 │   ├── baseline_models.py   # LSTM, Transformer, FNet baselines
