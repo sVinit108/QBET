@@ -2,7 +2,7 @@ import torch
 import argparse
 
 #from quixer.old_setup_training import get_train_evaluate
-#from QBET.setup_training import get_train_evaluate
+#from QBET.setup_training import get_train_evaluate 
 from QBET.setup import get_train_evaluate
 
 quixer_hparams = {
