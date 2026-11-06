@@ -1,5 +1,5 @@
 # Quantum-Based-Enhanced-Transformer-QBET
-(Code to be uploaded upon publication)
+(Code to be uploaded soon)
 
 Official implementation of **QBET (Quantum-Based Enhanced Transformer)**, a hybrid quantum-classical transformer architecture for natural language processing.
 
