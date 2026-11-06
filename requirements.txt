@@ -1,17 +1,17 @@
-#===== CORE DEPENDENCIES =====
+#CORE DEPENDENCIES
 torch==2.3.0
 torchtext==0.18.0
 torchvision==0.18.0
 torchaudio==2.3.0
 torchquantum>=0.1.8,<0.2
 
-#===== QISKIT ECOSYSTEM =====
+#QISKIT ECOSYSTEM
 qiskit<1.0
 qiskit-aer==0.13.3
 qiskit-ibm-provider==0.10.0
 qiskit-ibm-runtime==0.20.0
 
-#===== DATA & NUMERICAL COMPUTING =====
+#DATA & NUMERICAL COMPUTING
 datasets>=3.2,<3.3
 pyarrow>=15.0.0
 numpy<2.0
@@ -19,13 +19,13 @@ scipy>=1.10.0
 scikit-learn>=1.2.0
 opt_einsum>=3.3.0
 
-#===== UTILITIES =====
+#UTILITIES
 tqdm>=4.67,<4.68
 transformers>=4.30.0
 sympy>=1.11.0
 matplotlib>=3.5.0
 
-#===== GPU SUPPORT FOR A6000 (CUDA 12.1) =====
+#GPU SUPPORT FOR A6000 (CUDA 12.1)
 nvidia-cuda-nvrtc-cu12==12.1.105
 nvidia-cuda-runtime-cu12==12.1.105
 nvidia-cuda-cupti-cu12==12.1.105
